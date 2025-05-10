@@ -1,0 +1,1119 @@
+####  Microservices: Clean Architecture, DDD, SAGA, Outbox & Kafka ####
+
+
+Spring boot tarafından desteklenen mikro hizmetlerle başlayalım.
+
+Microservices
+
+Bir mikroservice, lightweight bir hizmettir ve expose açığa çıkaran hafif bir  protokoldür.
+Mikro hizmetlerin bağımsız geiştirme ve dağıtım, kolay horizantol scaling, daha iyi fault tolerance ve
+service başına farklı teknolojilerin kullanılmasına olanak sağlama gibi çok sayıda avantajı vardır.
+
+Bu avantajların yanı sıra, bunun maliyeti de vardır.
+Mikroservis dağıtık bir mimaride çalıştığından, hizmetlerin yönetilmesi ve bu hizmetler arasındaki
+communucation ve process yönetimi için doğru patterns ve tools kullanılması gerekecektir.
+
+İlerleyen noktalarda, bu sorunları çözmeye yardımcı olacak mimarilere ve modellere odaklanacağız.
+
+
+Clean & Hexagonal Architectures
+
+Bu mimariler, veritabanları, mesaj kuyrukları veya herhangi bir çalışma zamanı aracı veya cihazı gibi altyapıdan bağımsız olarak
+bir yazılımın iş mantığını geliştirmeye ve test etmeye yardımcı olur.
+
+
+Clean Arch princeples, her türlü yeni teknolojiye kolayca uyarlanabilen uzun ömürlü uygulamalar geliştirmenize yardımcı olacaktır.
+
+Her bir mikro hizmeti uygularken clean & hexagonal architecture uygulayacağız.
+
+
+
+
+
+
+
+
+
+
+
+
+✅ Kafka Mimarisi (Kafka Architecture)
+Apache Kafka, yüksek hacimli gerçek zamanlı veri akışını işlemek için kullanılan dağıtık, dayanıklı ve ölçeklenebilir bir mesajlaşma sistemidir.
+
+🔹 Kafka Broker’lar
+Kafka broker'lar, Kafka sunucularıdır.
+
+Bir Kafka kümesinde (cluster) birden fazla broker çalışır.
+
+Her broker belirli topic’lerin ve partition’ların verilerini saklar.
+
+Producer’lar mesajları broker’lara gönderir, consumer’lar da broker’lardan okur.
+
+🔹 Topic’ler (Konular)
+Kafka'da veriler topic adı verilen mantıksal yapılarda gruplanır.
+
+Topic, aynı türden mesajların gönderildiği ve okunduğu bir veri kanalı gibidir.
+
+Her topic birden fazla partition içerir.
+
+🔹 Partition’lar
+Partition, bir topic'in fiziksel olarak bölünmüş parçasıdır.
+
+Kafka’da veriler partition’lara yazılır; böylece veri paralel işlenebilir.
+
+Her partition, yalnızca tek bir producer tarafından sırayla yazılır ve her consumer okurken sırasını takip eder.
+
+🔹 Producers (Üreticiler)
+Producer, Kafka'ya veri gönderen uygulamadır.
+
+Mesajları belirli bir topic’in belirli bir partition’ına yazar.
+
+Mesajlar sadece eklenir, var olanlar değiştirilemez (append-only log yapısı).
+
+🔹 Consumers (Tüketiciler)
+Consumer, Kafka’dan veri okuyan uygulamadır.
+
+Okuma işlemi bir offset ile yönetilir (offset: partition’daki veri konumudur).
+
+Consumer istediği zaman kaldığı yerden okumaya devam edebilir.
+
+🔹 Replication (Kopyalama)
+Her partition, birden fazla broker'da kopyalanabilir (replica).
+
+Böylece sistem, bir broker arızalansa bile veri kaybı olmadan çalışmaya devam eder.
+
+Her partition’ın bir “leader” ve birden fazla “follower” kopyası olabilir.
+
+🔹 Scaling (Ölçeklenebilirlik)
+Kafka, yatayda ölçeklenebilir. Yani daha fazla partition, daha fazla broker eklenebilir.
+
+Veriler, partition stratejisi ile dağıtılır (örneğin, key'e göre veya round-robin).
+
+🔹 Immutable Append-Only Logs
+Kafka’daki veriler değiştirilemez.
+
+Yeni veriler her zaman log’un sonuna eklenir.
+
+Bu sayede sistem basit, tutarlı ve performanslı olur.
+
+🛠️ Zookeeper & Schema Registry
+🔸 Zookeeper
+Kafka, cluster durumunu ve metadata’yı yönetmek için uzun süre Zookeeper kullanmıştır.
+
+Örneğin: Broker’ların kayıtları, partition liderlikleri, topic metadata bilgileri burada tutulur.
+
+Ancak Kafka artık KIP-500 ile Zookeeper’dan kurtulmayı hedefliyor.
+
+KIP-500: Kafka’nın kendi metadata yöneticisini kullanmasını sağlayan yeni mimari.
+
+Şu anda tam anlamıyla production ready (üretim ortamı için hazır) değildir, bazı durumlarda hala Zookeeper kullanılır.
+
+🔸 Schema Registry
+Kafka'da veri genellikle Avro, JSON Schema veya Protobuf ile serileştirilir.
+
+Schema Registry, bu şemaları versiyonlu şekilde saklayan bir hizmettir.
+
+Her şemanın bir ID’si vardır.
+
+Producer Tarafı:
+Producer, veri göndermeden önce şemayı Schema Registry’ye kaydeder.
+
+Schema Registry, bu şemaya bir ID atar.
+
+Producer, veriyi bu ID ile Kafka’ya gönderir.
+
+Consumer Tarafı:
+Consumer, Kafka’dan gelen verideki schema ID’yi okur.
+
+Bu ID ile Schema Registry’den ilgili şemayı çeker.
+
+Veri, bu şema ile deserialize (geri açma) edilir.
+
+🎯 Bu sistem sayesinde hem tip güvenliği sağlanır, hem de sistemler birbirinden bağımsız olarak evrim geçirebilir (backward/forward compatibility).
+
+
+
+
+
+URL: https://alistair.cockburn.us/hexagonal-architecture
+
+Hexagonal architecture adapter and ports olarak da bilinir ve 2005 yılında Alistair Cockburn tarafından ortaya atılmıştır.
+
+Temel olarak, port olarak adlandırılan iyi tanımlanmış arayüzlerin tanımlanmasına ve arayüzlerin değiştirilebilir adaptörlerle
+uygulanmasına dayanır.
+
+
+Hexagonal architecture ile benzer bir yapı olan onion architecture adı verilen mimari de vardır ve her ikisi de domain logic'i,
+dış bağımlılıklardan(infrastructre katmanında) izole etme fikrine sahiptir.
+
+
+
+The Clean Architecture
+
+Robert Martin tarafından 2012 yılında önerilen clean architecture; hexagonal arch, onion arch kavramları da dahil olmak üzere
+bu clean arch olan mimariyi ayrıntılı olarak ele almakta, ancak domain layer katmanının uygulamasına ilişkin ayrıntılı tanımı da eklemektedir.
+
+Clean arch, dependency inversion ilkesini kullanır.
+
+
+Domain Driven Design (DDD)
+
+Her bir mikro hizmette, business logic uygularken, domain layer tasarımı uygulacağız.
+Temel olarak, etki alanı mantığınızı anlaması, geliştirmesi ve sürdürmesi daha kolay bir şekilde
+uygulamanıza yardımcı olacak stratejik ve taktiksel modeller sağlar.
+
+Tactical DDD
+Implement domain model with Aggregates, Entities, Value Objects, Services and Events hizmetlerini
+ve uygulama hizmetlerini ve ayrıca farklı paketlenmiş bağlamlarda çalışan diğer hizmetler için bildirimler
+oluşturmak üzere domain olaylarını(event) öğrenecek ve kullanacağız.
+
+
+Kafka
+
+Saga ve CQRS gibi modeller için ardınan event-driven bir yaklaşım izlenir.
+Olay bildirimini kullanmak için bir mesaj veri yolu kullanmanız gerekir.
+Bu amaçla, verileri kalıcı disk deposunda tuttuğu için esnek olan ve dahili bölümleme stratejisi sayesinde
+ölçeklenebilir olan kafkayı kullanacağız.
+
+Resiliency with replicated disc store & Scalability with partioning strategy
+
+
+Kafka, verileri depolamak için konular kavramıdır. Ve producer kafka konularında(topics)
+verileri yayınlamasına ve consumer tarafından verilerin okunmasını sağlar.
+
+
+Kafka'yı SAGA, Outbox ve CQRS modelleerinin uygulamasında kullanacağım.
+
+
+SAGA
+
+SAGA, 1987 tarihli bir yayında yerini almıştır.
+SAGA uzun ömürlü işlemler (Long lived transactions) için kullanılır.
+Birden fazla hizmet arasında dağıtılmış bir işlemi gerçekleştirmek için saga modelini uygulayacağız.
+
+SAGA'nın arkasında ki fikir hizmetler arasında uzun süredir devam eden bir işlemi sonuçlandırmak
+için bir yerel ACID işlemleri zinciri oluşturmaktadır.
+
+Atomicity, Consistency Isolation & Durability
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+####  Microservices: Clean Architecture, DDD, SAGA, Outbox & Kafka ####
+
+
+Bölüm 1 : Introduction
+
+
+Microservices: Powered by Spring Boot
+Independent development and deployment by different teams
+Her mikroservis, farklı ekipler tarafından bağımsız şekilde geliştirilebilir ve dağıtılabilir. Bu da organizasyonun daha çevik çalışmasını sağlar.
+
+Easy to scale for a specific service
+İhtiyaç duyulan servisi (örneğin sadece "user-service") bağımsız olarak ölçeklendirme imkânı sağlar. Yani sistemin tamamını büyütmeden sadece ilgili servisi çoğaltabilirsin.
+
+Better fault isolation
+Arızaların izole edilmesini sağlar. Örneğin bir serviste (örneğin "payment-service") hata olduğunda, bu diğer servisleri doğrudan etkilemez. Sistem parçalı şekilde çalışabilir.
+
+Enables to use different technology and languages for different services
+Her servis kendi ihtiyaçlarına göre farklı programlama dili (Java, Go, Node.js) veya farklı veritabanı teknolojileri (MongoDB, PostgreSQL) kullanabilir.
+
+Clean & Hexagonal Architectures
+Domain mantığını dış dünya bağımlılıklarından (örneğin veri tabanı, REST API, mesajlaşma altyapıları gibi) izole etmeyi hedefleyen mimari yaklaşımlardır.
+Hexagonal Architecture (ya da Ports and Adapters), uygulamanın iç çekirdeği ile dış dünya arasında arayüzler (ports) ve uygulamalar (adapters) üzerinden bağlantı kurulmasını sağlar. Böylece uygulama daha kolay test edilir, bağımlılıkları kolay değiştirilebilir hale gelir.
+
+Domain Driven Design (DDD)
+Bounded context:
+Her bir iş alanı, kendi sınırları içinde tanımlanır. Örneğin "Order" ve "Payment" ayrı bounded context’lerdir.
+
+Entities:
+Kimliği olan (ID ile tanımlanan) nesnelerdir. Örneğin Customer sınıfı bir entity’dir.
+
+Aggregates:
+İlişkili entity’lerin mantıksal kümesidir. Her aggregate’ın bir root entity’si vardır (örnek: Order aggregate’ı içinde OrderItem'lar olabilir).
+
+Value Objects:
+Kimlik taşımayan, değere göre karşılaştırılan nesnelerdir. Örnek: Address, Money.
+
+Domain services:
+Birden fazla entity’ye etki eden, iş mantığı içeren servislerdir.
+
+Application services:
+Kullanıcı isteklerini alır, domain servislerini çağırarak iş sürecini koordine eder.
+
+Domain Events:
+Domain içinde meydana gelen önemli olaylardır (örneğin OrderPlacedEvent).
+
+Kafka
+Event-driven mimarilerde kullanılan bir mesajlaşma altyapısıdır.
+Servislerin birbirine doğrudan bağlı olmadan (loosely coupled) sadece event'ler aracılığıyla haberleşmesini sağlar.
+Aynı zamanda bir event store gibi davranarak geçmiş olayların kaydını da tutabilir.
+
+SAGA
+Dağıtık sistemlerde, uzun süren (long-running) işlemleri yönetmek için kullanılan bir yöntemdir.
+Birden fazla servisin katıldığı bir iş akışı düşünün; örneğin sipariş oluşturma → stok güncelleme → ödeme alma.
+SAGA, bu işlemleri adım adım gerçekleştirir ve bir adım başarısız olursa geri alma (compensating action) işlemleri başlatır.
+İlk olarak 1987 yılında yayımlanan bu makalede tanımlanmıştır.
+
+Outbox
+Veritabanına yazılan bir event’in aynı anda Kafka’ya veya başka bir sisteme gönderilmesini sağlamak için kullanılır.
+Veritabanında bir outbox tablosu tutulur; burada saklanan event'ler daha sonra asenkron olarak mesaj kuyruğuna aktarılır.
+Bu yapı sayesinde local ACID transaction ile global (dağıtık) tutarlılık sağlanabilir — SAGA pattern’ini güvenli hale getirir.
+
+Command Query Responsibility Segregation (CQRS)
+Komutlar (Commands) ile sorgular (Queries) ayrılır.
+Yani veri yazma işlemleri (örneğin createOrder) ile okuma işlemleri (örneğin getOrdersByCustomerId) farklı servislerle veya veri modelleriyle yürütülür.
+Böylece okuma tarafı performans için optimize edilebilir, yazma tarafı ise iş kurallarına odaklanabilir.
+Ayrı ayrı ölçeklenebilir ve veri tutarlılığı eventual consistency mantığıyla sağlanabilir.
+
+Kubernetes (K8s) & Docker
+Docker, uygulamaların bağımlılıklarıyla birlikte paketlendiği konteynerler sağlar.
+
+Kubernetes, bu konteynerlerin dağıtımını, ölçeklendirilmesini ve yönetimini otomatize eden bir orkestrasyon platformudur.
+Uygulama bir kez yazılıp, her ortamda (cloud, on-premise) aynı şekilde çalıştırılabilir.
+Ayrıca load balancing, self-healing, service discovery gibi altyapısal ihtiyaçları da karşılar.
+
+Google Cloud & Google Kubernetes Engine (GKE)
+Google'ın sunduğu bulut bilişim altyapısıdır.
+GKE, Kubernetes kümelerini Google’ın veri merkezinde kolayca çalıştırmak için kullanılan yönetimli bir servistir.
+Yani altyapı yönetimiyle uğraşmadan sadece uygulamayı konteyner olarak deploy edebilirsin.
+Google Cloud ile birlikte yüksek erişilebilirlik, otomatik ölçeklendirme ve sürekli izleme gibi avantajlar sağlar.
+
+
+
+
+
+Bölüm 2:
+
+Introduction to Clean and Hexagonal architectures
+
+
+Clean Architecture (Temiz Mimari), yazılımda sorumlulukları ayırarak sürdürülebilir, test edilebilir ve genişletilebilir sistemler inşa etmeyi amaçlayan bir yaklaşımdır. Temel ilkeleri şunlardır:
+
+Katmanlara Ayrılmış Yapı (Separation of Concerns): Yazılım farklı katmanlara ayrılarak, her katman sadece kendi sorumluluğuna odaklanır. Bu sayede bakım ve geliştirme daha kolay hale gelir.
+
+Bağımlılıkların Ters Çevrilmesi (Dependency Inversion) ve Polimorfizm: Bağımlılıklar dış katmanlardan iç katmanlara (özellikle domain katmanına) doğru akar. Bu kural sayesinde domain (iş) katmanı diğer tüm katmanlardan bağımsız ve en stabil katman olur.
+
+Kaynak Kodu Bağımlılıkları İçeriye Doğru Akmalıdır: Kod içerisindeki bağımlılıklar yalnızca domain katmanına doğru olmalıdır. Hiçbir iç katman dış katmanlara bağımlı olmamalıdır.
+
+Framework, UI, Veritabanı ve Diğer Harici Bileşenlerden Bağımsızlık: Uygulamanın merkezi olan domain katmanı, dış dünyadaki araçlardan ve teknolojilerden tamamen bağımsız kalmalıdır.
+Test Edilebilirlik: Domain katmanı, herhangi bir dış bağımlılık olmadan kolayca test edilebilir olmalıdır.
+
+Varlıklar (Entities) ve Kullanım Senaryoları (Use Cases): Domain mantığı, varlıklar (entities) ve bu varlıklar üzerinde işlem yapan kullanım senaryoları (use cases) ile tanımlanmalıdır.
+
+Hexagonal ve Onion Mimariyle Aynı Temel İlke: Clean Architecture, Hexagonal ve Onion mimarileriyle aynı yüksek seviye amacı paylaşır: Domain katmanını izole etmek ve bağımsızlaştırmak.
+
+
+
+Hexagonal Architecture
+
+
+Hexagonal Architecture, yani Altıgen Mimari, aynı zamanda Ports and Adapters (Bağlantı Noktaları ve Adaptörler) mimarisi olarak da bilinir. 2005 yılında Alistair Cockburn tarafından ortaya atılmıştır.
+
+Temel İlkeler:
+
+İç ve Dış Katmanlara Ayrılır: Yazılım, “inputs” (domain katmanı) ve “outputs” (UI, veri kaynakları, frameworkler) olarak ikiye ayrılır. Mimari tasarım içeriden (domain katmanından) başlanarak yapılır.
+
+
+Domain Katmanı Tamamen İzole Edilmiştir: UI, veri katmanı veya Spring gibi herhangi bir framework domain katmanına doğrudan bağlı değildir. Domain yalnızca iş kuralları (business rules) ve kullanım senaryolarını içerir.
+Bağımlılık Yönü Dıştan İçe Doğrudur: Uygulama bileşenleri (veritabanı, API, UI vb.) domain katmanına bağlıdır ama domain, dış bileşenleri tanımaz.
+Test Edilebilirlik Amaçlanır: Altıgen mimarinin en büyük avantajı, domain mantığının herhangi bir dış sistem olmadan test edilebilmesidir.
+
+
+
+Ports (Bağlantı Noktaları) ve Adapters (Adaptörler):
+Portlar: Domain’in dış dünya ile iletişim kurduğu soyut arayüzlerdir.
+Adaptörler: Bu portları gerçek uygulamalara (örneğin, bir REST API, veritabanı erişimi) bağlayan somut sınıflardır.
+
+
+Alistair Cockburn’ün Tanımı:
+
+“Bir uygulamanın kullanıcılar, programlar, otomatik testler ya da toplu komut dosyaları (batch scripts) tarafından eşit şekilde tetiklenebilmesini ve nihai çalışma zamanı cihazlarından ve veritabanlarından tamamen bağımsız olarak geliştirilip test edilebilmesini sağlar.”
+
+
+
+
+Advantages of Clean & Hexagonal Architectures
+
+
+Clean Architecture ve Hexagonal Architecture, uzun ömürlü, değişen gereksinimlere kolayca uyum sağlayabilen yazılımlar geliştirmek için ideal mimari yaklaşımlardır. İşte bu mimarilerin sunduğu başlıca avantajlar:
+
+🔁 Değişen Gereksinimlere Uyum Sağlar
+Uzun ömürlü projelerde sık değişen iş kurallarına kolayca adapte olunabilir.
+Domain katmanı izole olduğu için sadece iş kuralları güncellenir, dış sistemler etkilenmez.
+
+🏗️ Katmanlı Mimarinin Evrimleşmiş Hali
+Geleneksel katmanlı mimaride bağımlılıklar tüm katmanlarda zincirleme şekilde akar.
+Clean/Hexagonal yapıda ise tüm bağımlılıklar domain katmanına doğru akar.
+Dış bağımlılıklar (veritabanı, API, UI vb.) birer “plugin” olarak çalışır.
+
+⏳ Uygulama Detaylarını Geciktirme
+Veritabanı, mesaj kuyruğu, dış servisler gibi detaylar daha sonra karar verilebilir.
+Öncelikle domain ve kullanım senaryoları (use case) geliştirilir.
+
+🧪 Kolay ve Erken Test Edilebilirlik
+Gerçek sistem entegrasyonu olmadan, sadece mock’lar kullanarak iş mantığı test edilebilir.
+Daha az bağımlılıkla daha hızlı birim testler yazılabilir.
+
+🔌 Adaptörleri Kolayca Değiştirebilme
+Örneğin, bir veri kaynağı PostgreSQL’den MongoDB’ye geçirilebilir; domain katmanına dokunulmaz.
+Sadece adaptör (adapter) katmanı güncellenir.
+
+🔧 Kolay Bakım ve Sürdürülebilirlik
+Sistemin bir parçasını değiştirirken diğer kısımlar etkilenmez.
+İzole katmanlar sayesinde değişim lokal kalır.
+
+🚀 Bağımsız Geliştirme ve Yayınlama
+Takımlar domain, UI veya veri katmanlarını ayrı ayrı geliştirebilir.
+Mikroservis yaklaşımına da uygundur: bağımsız deploy edilebilir parçalar üretilebilir.
+
+
+
+
+Business Logic in Clean Architecture
+
+Clean Architecture’da iş mantığı, uygulamanın merkezinde yer alır ve iki ana bileşenle tanımlanır: Entities (Varlıklar) ve Use Cases (Kullanım Senaryoları). Bu katman, sistemin “ne yaptığına” odaklanır, “nasıl yaptığına” değil.
+
+🧩 Entities (Varlıklar)
+Tanım: Küçük ama kritik iş kurallarını barındıran nesnelerdir.
+Genellikle uygulama genelinde geçerli olan, zamana karşı daha dayanıklı kuralları içerir.
+Bağımlılıktan tamamen bağımsızdırlar. Framework, UI veya veritabanı bilgisi taşımazlar.
+Örnek: Bir Customer, Account, Invoice gibi sınıflar; applyDiscount, calculateTax gibi kuralları içerir.
+
+🔄 Use Cases (Kullanım Senaryoları)
+Tanım: Uygulama’ya özgü iş kurallarını tanımlar.
+Varlıkların (entities) hangi sırayla, ne zaman ve nasıl kullanılacağını belirler.
+Veri akışını yönlendirir, gerekli durumlarda entity’lerin iş kurallarını tetikler.
+Giriş ve çıkış portları aracılığıyla dış dünya ile iletişim kurar (örneğin veri alma, sonuç döndürme).
+UI ya da veritabanı hakkında bilgi sahibi değildir.
+📌 Özetle:
+Entities: Ne yapılacağını bilir.
+Use Cases: Ne zaman ve nasıl yapılacağını bilir.
+
+🔄 Akış Örneği
+
+[ Controller (UI/Request) ]
+↓
+[ Use Case (Orchestration) ]
+↓
+[ Entity (Core Rule Execution) ]
+
+Bu yapı sayesinde:
+İş mantığı dış etkilere karşı korunur,
+Kolay test edilebilir hale gelir,
+Değişen teknoloji ve dış sistemlere rağmen domain mantığı stabil kalır.
+
+
+
+
+Clean Architecture and Domain Driven Design(DDD)
+
+
+✅ Clean Architecture ve Domain-Driven Design (DDD)
+Clean Architecture ve Domain-Driven Design (DDD) yüksek seviyede aynı amaca hizmet eder:
+➡️ İş mantığını (domain logic) uygulamanın geri kalanından izole etmek
+➡️ Karmaşık iş kurallarını anlamlı bir şekilde modellemek
+
+Bu iki yaklaşım, benzer yapıları kullanır ama odak noktaları farklıdır.
+
+🧱 Karşılaştırmalı Yapı
+Clean Architecture	Domain-Driven Design (DDD)
+Domain katmanı	Domain katmanı
+▪️ Entities (Varlıklar)	▪️ Entities (Varlıklar) + Aggregate Root (Kök)
+▪️ Use Cases (Kullanım Senaryoları)	▪️ Domain Services (Alan Servisleri)
+
+📌 Açıklamalar:
+Entities (Varlıklar):
+Hem Clean Architecture hem de DDD'de, iş kurallarını taşıyan nesnelerdir.
+DDD’de ayrıca Aggregate kavramı vardır: birden fazla entity’yi yöneten bir yapı, başında Aggregate Root olur.
+
+Use Cases (Kullanım Senaryoları) (Clean Architecture):
+Sistemin "ne yaptığına" dair akışı kontrol eder. Uygulama kurallarını içerir.
+DDD'de bunun karşılığı tam net değildir ama genellikle Application Layer olarak modellenir.
+
+Domain Services (DDD):
+Varlıklara ait olmayan ama iş mantığında yeri olan operasyonları içerir.
+Clean Architecture'da bu tür servisler genellikle Use Case'ler içinde işlenir.
+
+🎯 Sonuç
+Clean Architecture, sistemi test edilebilir, bağımsız, kolay değiştirilebilir kılmak için katmanlara ayırır.
+
+DDD ise karmaşık iş kurallarını doğru modellemeye odaklanır.
+
+DDD ile geliştirilen domain katmanı, Clean Architecture’ın "Domain Layer"ı ile çok iyi uyum sağlar.
+
+Hatta çoğu zaman DDD, Clean Architecture’ın Domain katmanını oluşturmak için ideal yöntem olarak kullanılır.
+
+
+
+Clean Architecture
+
+Clean Architecture (Temiz Mimari), yazılımı katmanlara ayırarak ve Bağımlılık Kuralına (Dependency Rule) uyarak sürdürülebilir, test edilebilir ve esnek sistemler oluşturmayı amaçlar. Aşağıda, bu mimarinin temel prensiplerini anlatan önemli alıntıların Türkçelerini bulabilirsin:
+
+“Yazılımı katmanlara ayırarak ve Bağımlılık Kuralı'na uyarak, doğası gereği test edilebilir bir sistem oluşturmuş olursunuz. Bu da beraberinde birçok fayda getirir. Sistemin dışsal parçaları (veritabanı, web framework gibi) modası geçtiğinde, bu parçaları minimum zahmetle değiştirebilirsiniz.”
+✅ Bu, mimarinin dış bağımlılıklara karşı ne kadar esnek olduğunu vurgular. Temel iş mantığı etkilenmeden, altyapı değiştirilebilir.
+
+“İyi bir mimariye sahip bir alışveriş sepeti uygulaması, bir alışveriş sepeti uygulaması gibi görünür. Bu sistemin kullanım senaryoları, sistemin yapısında açıkça görülebilir olur. Geliştiriciler davranışları aramak zorunda kalmazlar; çünkü bu davranışlar sistemin en üst seviyesinde, birinci sınıf unsurlar olarak görülebilir durumda olur.”
+✅ Bu, Clean Architecture'ın anlaşılır ve niyetini açıkça ortaya koyan bir yapı sunduğunu gösterir. İş mantığı sistemin her yerinde dağınık değil, merkezi bir noktadadır.
+
+“Üst seviye modüller, alt seviye modüllere bağımlı olmamalıdır. Her ikisi de soyutlamalara (abstraction) bağımlı olmalıdır.”
+✅ Bu ifade Dependency Inversion Principle (Bağımlılığı Tersine Çevirme Prensibi)’ni anlatır. Önemli olan, uygulamanın soyutlama katmanına dayanmasıdır; detaylara değil.
+
+“Soyutlamalar detaylara bağımlı olmamalıdır. Detaylar, soyutlamalara bağımlı olmalıdır.”
+✅ Yani, veritabanı, dosya sistemi, ağ iletişimi gibi altyapı detayları iş mantığını belirlememelidir. Bunlar gerektiğinde değiştirilebilir olmalıdır.
+
+“Yazılımı esnek (soft) tutmanın yolu, mümkün olduğunca çok seçeneği mümkün olduğunca uzun süre açık tutmaktır. Hangi seçenekler açık tutulmalı? Önemsiz detaylar. Bu detaylar, politikaları etkilemeden insanlar, diğer sistemler ve geliştiricilerle iletişim kurmamızı sağlayan şeylerdir. Bunlar arasında G/Ç aygıtları, veritabanları, web sistemleri, sunucular, framework'ler, iletişim protokolleri vb. yer alır.”
+✅ Yani yazılımın öz davranışı (policy) sabit kalmalı, geri kalan her şey (I/O, veritabanı, protokoller) kolayca değiştirilebilir olmalıdır.
+
+
+
+
+Clean Architecture & Hexagonal Architecture Temel Farkları
+
+Clean Architecture ve Hexagonal Architecture (Altıgen Mimari) aslında aynı amacı paylaşan, yani iş mantığını (domain) dış bağımlılıklardan izole etmeyi hedefleyen mimari desenlerdir. Ancak yaklaşım ve kavramsal yapı bakımından bazı farklılıkları vardır.
+
+✅ ORTAK NOKTALAR
+Ortak Nokta	Açıklama
+İş mantığı merkezdedir	Domain (Entities + Use Cases), sistemin kalbinde yer alır.
+Bağımlılıkların yönü içeri doğrudur	UI, veri tabanı, framework gibi detaylar domain'e değil, domain bu detaylara bağlı değildir.
+Test edilebilirlik yüksektir	İş mantığı dış etkilerden bağımsız olduğundan, kolayca izole edilip test edilebilir.
+Soyutlamalarla çalışılır	Detaylar (adapters, gateways) soyutlamalar üzerinden bağlanır.
+
+🔍 TEMEL FARKLAR
+Özellik	Hexagonal Architecture	Clean Architecture
+Kavramlar	Ports & Adapters	Entities, Use Cases, Interface Adapters, Frameworks
+Başlangıç noktası	Domain etrafında iç ve dış katmanlar tanımlanır	Net katmanlara ayrılmış bir iç içe yapı vardır (soğan gibi)
+Görsellik (şema)	Altıgen yapı: içte domain, kenarlarda adapter’lar	Katmanlı (daire/soğan modeli): dıştan içe bağımlılık yönü
+Vurgu	Giriş/Çıkış noktalarını soyutlamak (ports)	Uygulama kurallarını ve bağımlılık yönünü soyutlamak
+Test yaklaşımı	Her dış bileşen bir adapter olduğundan kolayca sahte (mock) yapılabilir	Kullanım senaryoları düzeyinde test odaklı yapı inşa edilir
+Popülerlik ve evrim	2005, Alistair Cockburn	2012+, Robert C. Martin (Uncle Bob) tarafından popülerleştirildi
+
+🎯 Özetle:
+Hexagonal Architecture: Uygulamanın içi ve dışı ayrılır. Dış dünya ile olan tüm etkileşimler ports & adapters aracılığıyla soyutlanır.
+
+Clean Architecture: Daha katmanlı ve sistematik bir yapı sunar. Domain merkezde yer alır, etrafında use case’ler, ardından adapter katmanı ve en dışta framework’ler bulunur.
+
+
+
+
+
+
+
+
+
+packaging: pom vs packaging: jar
+packaging: **jar**:
+Bu ayar, Maven projesinin bir Java kütüphanesi (JAR dosyası) olarak paketleneceğini belirtir. Yani proje derlenip .jar uzantılı bir çıktı üretilir.
+
+packaging: **pom**:
+Bu ayar, projenin kendisi bir modül içermeyen, diğer alt modülleri yöneten bir yapı (container) olduğunu ifade eder. Genellikle çok modüllü projelerde kullanılır.
+pom olarak paketlenen bir proje, kendi başına derlenip çalıştırılamaz; sadece jar, war gibi paketlenen alt modülleri organize eder.
+
+Özetle:
+pom → Alt modülleri içeren ana proje (parent)
+
+jar → Gerçek bir kütüphane ya da uygulama çıktısı üreten modül
+
+
+
+
+
+relativePath
+Harici (external) üst projeler (parent projects) için boş bırakılmalıdır.
+
+Sadece yerel (local) üst projeler için kullanılır.
+
+Açıklama:
+Maven'de bir projenin parent öğesi tanımlandığında, Maven varsayılan olarak üst projenin pom.xml dosyasını bulmak için ../pom.xml gibi bir yol arar. Bu yol, relativePath ile özelleştirilebilir.
+
+Eğer üst proje aynı dosya sisteminde, yerel olarak mevcutsa, relativePath ile Maven’a dosya yolunu gösterebilirsin.
+
+Eğer üst proje harici bir repository'den (örneğin Nexus, Maven Central) çekiliyorsa, relativePath boş bırakılmalı veya silinmelidir.
+
+Örnek:
+<parent>
+<groupId>com.example</groupId>
+<artifactId>parent-project</artifactId>
+<version>1.0.0</version>
+<relativePath /> <!-- Harici parent için boş -->
+</parent>
+
+
+
+
+
+
+
+
+maven-compiler-plugin
+Projenizin kaynak kodlarını derlemek için kullanılır.
+
+Varsayılan source ve target sürümü 1.7'dir (yani Java 7).
+
+Açıklama:
+Bu eklenti, Maven ile projenizi derlerken hangi Java sürümünü kullanacağınızı belirtmek için kullanılır. Eğer source ve target değerlerini belirtmezseniz, Maven varsayılan olarak Java 1.7 sürümünü kullanır.
+
+Örnek Kullanım:
+<build>
+<plugins>
+<plugin>
+<groupId>org.apache.maven.plugins</groupId>
+<artifactId>maven-compiler-plugin</artifactId>
+<version>3.11.0</version>
+<configuration>
+<source>17</source>
+<target>17</target>
+</configuration>
+</plugin>
+</plugins>
+</build>
+Bu örnekte, proje Java 17 ile derlenecek şekilde ayarlanmıştır.
+
+
+
+
+
+
+
+
+
+"Dependency management" (bağımlılık yönetimi), alt modüllerdeki bağımlılıkların sürümlerini birleştirir ve merkezi olarak kontrol etmeye yarar.
+
+Yani Türkçesiyle şöyle diyebiliriz:
+
+Bağımlılık yönetimi, alt modüllerde kullanılan bağımlılıkların sürümlerini birleştirir ve merkezi olarak yönetilmesini sağlar.
+
+Özellikle Maven ya da Gradle gibi araçlarda dependencyManagement (Maven'da) ya da platform (Gradle'da) kullanılarak sürümler tek bir yerde tanımlanır, alt projelerde ise sadece bağımlılık adı belirtilerek sürüm otomatik olarak alınır.
+
+
+
+
+
+
+
+
+
+Domain-Driven Design (DDD) Tanıtımı
+
+Domain-Driven Design (DDD), kurumsal yazılım geliştirme sırasında karşılaşılan yaygın sorunlara çözüm önerileri sunan bir yaklaşımdır. Bu yöntem, yazılımın iş alanı (domain) ile güçlü bir şekilde ilişkilendirilmesine odaklanır. Temel amaç, karmaşık iş problemlerini doğru bir şekilde modelleyip yazılıma aktararak, yazılımın iş gereksinimlerini etkin bir şekilde karşılamaktır.
+
+Domain Model = Domain'in Kavramsal Modeli
+Domain model, bir sistemin davranışını ve verisini tanımlayan bir kavramsal modeldir. Domain model, sistemin nasıl çalıştığını ve ne tür veri işlemleri gerçekleştirdiğini belirler. Bu model, yazılımın iş alanını daha iyi anlamak ve tasarlamak için kullanılır.
+
+Domain Logic = Yazılımın Merkezi Mantığı
+Domain logic, yazılımın merkezinde yer alır ve diğer bağımlılıklardan bağımsızdır. Yani, yazılımın iş mantığı, dışarıdan gelen etkilere mümkün olduğunca az bağımlıdır ve sistemin iş kurallarını yönetir.
+
+Stratejik DDD ve Taktiksel DDD
+Stratejik DDD
+Stratejik DDD, domain model için sınırlar (bounded contexts) tanımlar. Her domain için tek bir bounded context olmalıdır. Bu sayede, farklı alanlar arasındaki karışıklık engellenir.
+
+Domain nedir?: Uygulamanızın operasyonel alanıdır. Örneğin; "Online yemek siparişi" bir domain olabilir.
+
+Bounded Context: DDD'nin merkezi desenidir. Bir domain içindeki sınırları tanımlar. Yani, belirli bir domain içinde işler nasıl yürür ve hangi terimler kullanılır.
+
+Ubiquitous Language (Ortak Dil): Domain uzmanları ve geliştiriciler arasında kullanılan ortak dildir. Bu dil, tüm paydaşların aynı terimleri kullanarak birbirini daha iyi anlamasını sağlar.
+
+Taktiksel DDD
+Taktiksel DDD, yazılımın uygulanabilir desenlerine (implementation patterns) odaklanır. Stratejik DDD ile tanımlanan sınırların içine bu desenler uygulanır.
+
+Entities (Varlıklar): Kimliği olan domain nesneleridir. İşin kurallarını taşıyan ve sistemin kritik işleyişine dahil olan nesnelerdir.
+
+Entities = Benzersiz bir kimliğe sahip olan ve domain’in temel nesneleri
+
+Aggregates (Toplamalar): Birbiriyle ilişkili olan, tutarlı bir durumda olması gereken varlıklar grubudur. Aggregate'lar, dışarıya sadece Aggregate Root üzerinden erişilir.
+
+Aggregate Root (AR): Aggregate için giriş noktasındaki varlıktır. Bütün iş operasyonları Aggregate Root üzerinden yapılmalıdır. Dışarıdan erişim sadece AR üzerinden yapılır ve bu kök nesne, yan etkisiz ve saf fonksiyonlar sunmalıdır.
+
+Order Processing (Sipariş İşleme):
+
+Aggregate Id: Order (siparişId) → OrderItem → Product
+
+Aggregate Root: Order (Sipariş)
+
+Toplamaların Tutarlı Durumda Olmasını Sağlamak İçin:
+
+İş kurallarını zorlamak
+
+Durum değiştiren tüm işlemleri koordine etmek
+
+Veritabanı kısıtlamalarını ve optimistic locking (iyimser kilitleme) kullanmak
+
+Aggregate Root üzerinden referans verme gereklidir.
+
+Value Objects (Değer Nesneleri): Kimlikleri olmayan, değiştirilemez nesnelerdir. Değerin kendisi önemlidir. Değer, bir bağlam (context) içinde anlam kazanır.
+
+Value Objects = Değiştirilemez, birbirinin yerine geçebilen domain nesneleri
+
+Domain Events (Domain Olayları): Farklı domain’leri birbirinden ayırır. Bir domain’de gerçekleşen olaylar, diğer domain’lerin durumunu değiştirebilir. Domain olayları, sistemin genişletilebilirliğini artırır ve genellikle ayrı bir işlemde çalışır.
+
+Eventual Consistency (Sonraki Tutarlılık): Sistem tüm okumalarda en güncel değeri döndürecektir, ancak yeni bir güncelleme yapılmazsa. Domain event'ler, bu tür tutarlılığı sağlamak için mükemmel bir yöntemdir.
+
+Domain event dinleyicileri, domain olayları tetiklendiğinde çalışacak şekilde yapılandırılmıştır ve her bir dinleyici, iş mantığını işlemek için ayrı bir domain servisi kullanabilir.
+
+Domain Services (Domain Servisleri)
+Domain servisleri, aggregate içinde yer alamayan iş mantıklarını taşır. Farklı aggregate’lar arasında etkileşimi yönetir.
+
+Application Services (Uygulama Servisleri)
+Uygulama servisleri, domain’i dış dünya ile iletişim kuracak şekilde izole eder. İşlem senaryolarını koordine eder, güvenliği sağlar ve uygun aggregate’ları bulur. İş mantığı içermez, sadece veri yönetimi ve transaction yönetimi yapar.
+
+Domain event listeners ise, domain event'ler tetiklendiğinde çalışan özel türde uygulama servisleridir.
+
+DDD'nin Temel İlkesine Dair Cümleler
+"Çoğu yazılım projesi için, odak noktası domain ve domain logic olmalıdır."
+
+"Karmaşık domain tasarımları, bir model üzerine kurulmalıdır."
+
+"Domain-Driven Design, karmaşık domainlerle başa çıkması gereken yazılım projelerini hızlandırmayı amaçlayan bir düşünme biçimi ve öncelikler setidir."
+
+"Katmanlı mimari, çoğu sistemde farklı katmanlama şemaları altında kullanılır. Ancak domain-driven design, yalnızca bir katmanın var olmasını gerektirir."
+
+"Domain modeli bir kavramlar setidir. 'Domain katmanı' bu modelin tezahürüdür ve doğrudan ilişkili tasarım öğelerini içerir. İş mantığının tasarımı ve uygulanması, domain katmanını oluşturur. MODEL-DRIVEN DESIGN'da, yazılım yapıları domain katmanındaki model kavramlarını yansıtır."
+
+
+
+
+
+
+
+
+
+
+
+
+⚙️ Saga Pattern Nedir?
+Saga, mikroservis mimarilerinde dağıtık ve uzun süreli işlemleri (LLT - Long Lived Transactions) güvenli bir şekilde yönetmek için kullanılan bir tasarım desenidir.
+
+İlk kez 1987’de akademik bir yayında tanıtılmıştır ve her adımı ayrı bir yerel ACID işlemi olan bir işlem zinciri olarak çalışır.
+
+🔹 Neden Saga Pattern?
+Mikroservislerde klasik ACID (atomicity, consistency, isolation, durability) işlemler tek bir veritabanı üzerinde çalıştığında geçerlidir.
+Ancak mikroservis mimarisinde farklı servisler kendi veritabanlarını kullanır.
+Bu durumda klasik transaction yönetimi uygulanamaz, çünkü:
+
+İlişkili işlemler farklı servislerde dağılmıştır.
+
+Servisler bağımsız çalışmalıdır.
+
+2-phase commit gibi dağıtık transaction yönetimi pahalı ve karmaşıktır.
+
+🔹 Saga Nasıl Çalışır?
+Saga pattern, bir işlem zinciri modelidir.
+Her adım bir lokal transaction’dır ve başarılı olursa bir sonraki adıma geçilir.
+Eğer bir adım başarısız olursa, önceki başarılı adımlar için telafi (compensating) işlemleri çalıştırılır.
+
+🧩 Adımlar
+İlk servis, kendi işlemini yapar (örneğin sipariş oluşturma).
+
+Başarılı olursa, bir sonraki servise geçilir (örneğin ödeme al).
+
+Eğer bir servis başarısız olursa (örneğin stok kalmadı):
+
+Önceki başarılı işlemler geri alınır.
+
+Bu geri alma işlemlerine compensating transaction denir.
+
+🔁 Compensating Transactions (Telafi Edici İşlemler)
+Her başarılı adımın bir de geri alma (rollback) işlemi vardır.
+Bu işlemler klasik rollback değil, manuel olarak tanımlanmış telafi adımlarıdır.
+
+Örnek:
+Sipariş oluşturuldu → telafisi: siparişi iptal et
+
+Ödeme alındı → telafisi: ödemeyi iade et
+
+🔸 Saga Step Interface (Saga Adım Arayüzü)
+Her adım genellikle aşağıdaki iki fonksiyonu içerir:
+
+java
+Kodu kopyala
+interface SagaStep {
+    void execute();           // Normal işlem
+    void compensate();        // Geri alma işlemi
+}
+Bu sayede her adım bağımsız tanımlanabilir ve orchestrator/choreography mantığıyla işlenebilir.
+
+🔄 Saga Türleri
+1. Orchestration-based Saga
+Merkezi bir orchestrator servis vardır.
+
+Hangi adımın çalışacağını kontrol eder.
+
+Hata durumunda telafi adımlarını sırayla başlatır.
+
+2. Choreography-based Saga
+Servisler birbirleriyle event göndererek haberleşir.
+
+Merkezi kontrol yoktur.
+
+Daha gevşek bağlılık sağlar ama karmaşıklaşabilir.
+
+✅ Avantajlar
+Dağıtık sistemlerde tutarlılığı sağlar
+
+ACID yerine eventual consistency sağlar
+
+Bağımsız servisler sayesinde esnek yapı sunar
+
+⚠️ Zorluklar
+Telafi işlemleri manuel tanımlanmalı
+
+Karmaşık iş akışlarında hata yönetimi zorlaşır
+
+Zamanlama, idempotency, veri tutarlılığı gibi konular dikkat ister
+
+
+
+
+
+
+📦 Outbox Pattern Nedir?
+Outbox Pattern, mikroservislerde tutarlı (consistent) ve güvenilir dağıtık işlemler gerçekleştirmek için kullanılan bir yapıdır.
+Genellikle Saga Pattern ile birlikte çalışarak, dağıtık sistemlerde eventual consistency (nihai tutarlılık) sağlar.
+
+🎯 Amaç Nedir?
+Mikroservislerde bir olay (örneğin sipariş oluşturma) hem veritabanına yazılmalı hem de başka servislere event olarak bildirilmelidir.
+
+Ama doğrudan veritabanına yazmak ve sonra event göndermek iki ayrı işlemdir ve aralarında tutarsızlık olabilir (örneğin biri başarılı olurken diğeri başarısız olabilir).
+Bu durumu engellemek için Outbox Pattern kullanılır.
+
+🛠️ Nasıl Çalışır?
+Yerel işlem (ACID) içerisinde hem asıl veri (örneğin sipariş) hem de event bilgisi outbox tablosuna yazılır.
+
+Event henüz dış sisteme gönderilmez.
+
+Daha sonra bir sistem (scheduler veya CDC) bu outbox tablosunu okuyarak event’i yayınlar (örneğin Kafka, RabbitMQ vb.).
+
+Böylece dağıtık işlemler güvenli şekilde tamamlanır.
+
+📋 Outbox Tablosu Nedir?
+Veritabanında aşağıdaki gibi bir tablo bulunur:
+
+id	event_type	payload	created_at	status
+1	OrderCreated	{orderId: 123}	2025-05-08 10:00:00	NOT_SENT
+
+🕓 Outbox Event’leri Yayınlama Yöntemleri
+1. Pulling (Scheduler)
+Belirli aralıklarla outbox tablosu sorgulanır.
+
+Yayınlanmamış event’ler alınır ve mesaj kuyruğuna gönderilir.
+
+Gönderildikten sonra “status” = SENT yapılır.
+
+2. Change Data Capture (CDC)
+Transaction log’lar dinlenerek event’ler otomatik alınır.
+
+Debezium gibi araçlarla Kafka’ya otomatik event akışı sağlanabilir.
+
+🔁 Saga ve Order Durum Takibi
+Outbox tablosu aynı zamanda Saga adımlarının durumunu takip etmek için de kullanılabilir.
+
+Örn: OrderSagaStarted, PaymentSucceeded, OrderCompleted
+
+🛡️ Güvenlik ve Dayanıklılık
+✔️ Idempotency:
+Event aynı anda iki kez gönderilirse, tüketici aynı etkiyi iki kez yaşamamalıdır.
+
+Her event benzersiz ID taşır ve işlenmiş event'ler kayıt altında tutulur.
+
+✔️ Optimistic Locking & Veritabanı Kısıtları:
+Aynı veriye birden fazla işlem yapılmasını engeller.
+
+Veritabanı seviyesinde tutarlılığı korur.
+
+✅ Avantajları
+ACID garantisi altında event üretimi sağlar.
+
+Dağıtık sistemlerde eventual consistency sağlar.
+
+Saga pattern ile uyumlu çalışır.
+
+Yeniden oynatma (replay) ve hata ayıklama kolaydır.
+
+⚠️ Zorluklar
+Ek bir tablo ve yönetim gerektirir.
+
+Event gönderme kısmı düzgün yapılandırılmalı (özellikle gecikme ve hata yönetimi açısından).
+
+İşleyici servislerde idempotency dikkatle uygulanmalıdır.
+
+
+
+
+
+
+CQRS (Command Query Responsibility Segregation) pattern'ının detaylı Türkçe açıklaması:
+
+📌 CQRS Nedir?
+CQRS, bir sistemdeki okuma (Query) ve yazma (Command) işlemlerini ayrı modeller üzerinden ele almayı öneren bir yazılım mimarisi desenidir.
+
+✴️ Amaç:
+Okuma ve yazma işlemlerinin farklı performans, güvenlik ve ölçeklenebilirlik ihtiyaçlarını ayrı ayrı ele almak.
+
+🧱 Temel Kavramlar
+1. Command (Yazma İşlemi)
+Sistemde bir durumu değiştiren işlemler (örnek: Sipariş oluştur, Ürün güncelle).
+
+Veritabanına yazılır ve genellikle bir event üretir.
+
+ACID prensipleriyle çalışan bir modeldir.
+
+2. Query (Okuma İşlemi)
+Sistemin mevcut durumunu sorgulayan işlemler (örnek: Sipariş listesi al).
+
+Farklı bir veri deposu veya model üzerinden çalışır.
+
+Yüksek performanslı veri okuma için özel yapılandırılabilir (örneğin: Redis, Elasticsearch).
+
+🚀 Avantajları
+Performans: Okuma işlemleri çok hızlı ve özelleştirilebilir hale gelir.
+
+Ölçeklenebilirlik: Okuma ve yazma tarafı bağımsız ölçeklenebilir.
+
+Çakışma Azalır: Veri güncelleme ve okuma sırasında oluşabilecek veri tutarsızlıkları azalır.
+
+Doğru teknoloji seçimi: Yazma için RDBMS, okuma için NoSQL veya cache kullanılabilir.
+
+⚠️ Dezavantajları
+Sistemde eventual consistency (nihai tutarlılık) oluşur. Okuma tarafı, yazma işlemi tamamlandıktan hemen sonra güncellenmeyebilir.
+
+Mimari karmaşıklık artar.
+
+Ek altyapı bileşenleri ve senkronizasyon stratejileri gerekir.
+
+📦 Event Store Nedir?
+Event Store, sistemdeki işlemleri (event’leri) değiştirilemez (immutable) şekilde saklayan özel bir veritabanıdır.
+
+Özellikleri:
+Her event geçmişte yaşanmış bir aksiyonu temsil eder.
+Örnek: OrderCreated, PaymentReceived
+
+Event’ler asla silinmez veya değiştirilmez.
+
+Bu event’ler tekrar oynatılarak (replay) sistemin geçmişi tekrar oluşturulabilir.
+
+🔁 Event Replay (Kafka ile)
+Event store olarak Kafka kullanılıyorsa, geçmiş event’leri tekrar işlemek için:
+
+✅ Yeni Consumer Group oluştur:
+Kafka’da her yeni consumer group, topic’in başından başlayarak event’leri okur.
+
+Böylece geçmiş tüm event’ler tekrar okunabilir ve yeni bir okuma modeli oluşturulabilir.
+
+🔄 CQRS + Event Sourcing
+Genellikle CQRS ile birlikte Event Sourcing de kullanılır.
+
+📌 Nasıl işler?
+Bir Command işlenir (örneğin sipariş ver).
+
+Bu command sonucu olarak bir Event üretilir (örneğin OrderCreated).
+
+Event, event store’a yazılır.
+
+Bir event listener, bu event’i dinleyerek okuma modelini (query store) günceller.
+
+Kullanıcı, okuma modelinden verileri sorgular.
+
+🧠 Özet
+Özellik	Açıklama
+Command	Veri değiştirir (Yazma)
+Query	Veri sorgular (Okuma)
+Eventual Consistency	Okuma modeli zamanla güncellenir
+Event Store	Tüm değişiklikler event olarak saklanır
+Replay Events	Geçmiş event’leri yeniden oynatarak yeni veri modelleri oluşturulabilir
+Teknoloji Uyumu	RDBMS + Kafka + NoSQL/Redis gibi kombinasyonlar yaygındır
+
+
+
+
+
+
+
+
+☸️ Kubernetes Nedir?
+Kubernetes (K8s), açık kaynaklı bir konteyner orkestrasyon platformudur. Konteyner tabanlı uygulamaların:
+
+Otomatik olarak dağıtılması (deployment)
+
+Yönetilmesi (management)
+
+Ölçeklenmesi (scaling)
+
+İyileştirilmesi (self-healing)
+
+gibi işlemleri otomatize eder.
+
+🧱 Temel Kavramlar
+🖥️ Node
+Bir Kubernetes kümesini oluşturan fiziksel sunucular veya sanal makinelerdir.
+
+Her node, üzerinde çalışan pod’ları yönetmek için gerekli bileşenleri (kubelet, kube-proxy, container runtime) içerir.
+
+Master (control plane) ve Worker (çalışan) node’lar olmak üzere ikiye ayrılır.
+
+📦 Pod
+Kubernetes’in çalıştırılabilir en küçük birimidir.
+
+Bir pod, bir veya daha fazla container içerir (genellikle Docker).
+
+Aynı pod içindeki container’lar:
+
+Aynı network namespace’i paylaşır.
+
+Ortak dosya sistemine erişebilir.
+
+Birlikte çalışmak üzere tasarlanır (örneğin: uygulama + sidecar).
+
+🤖 Controller
+Pod’ların oluşturulması, güncellenmesi ve ölçeklenmesi gibi işlemleri yöneten kaynaklardır.
+
+Yaygın Controller Türleri:
+Deployment: Belirli bir pod sürümünü yönetir, ölçeklendirir, günceller.
+
+ReplicaSet: Belirli sayıda pod’un çalışır durumda kalmasını sağlar.
+
+StatefulSet: Durum bilgisi olan uygulamalar için kullanılır.
+
+DaemonSet: Her node’da bir pod çalıştırır.
+
+Job / CronJob: Zamanlı veya tek seferlik işler için.
+
+🌐 Service
+Kubernetes’te pod’lar dinamik olarak başlatılır ve IP adresleri değişebilir. Service, bu pod’lara sabit bir erişim noktası sağlar.
+
+Pod’lar arasında veya dış dünyadan gelen trafiği yönlendirir.
+
+Servis Türleri:
+Tür	Açıklama
+ClusterIP	(Default) Hizmeti sadece cluster içinden erişilebilir kılar. Mikroservisler arası iletişimde kullanılır.
+NodePort	Servisi, node’un IP adresi ve sabit bir port üzerinden dış dünyaya açar. Port aralığı varsayılan olarak 30000-32767 arasındadır.
+LoadBalancer	Dış dünyaya tek bir IP ile erişim sağlar. Bulut servis sağlayıcısı tarafından harici load balancer oluşturulur.
+ExternalName	DNS tabanlı yönlendirme yapar (harici servislerin yönlendirilmesi için).
+
+🌐 NodePort Nedir?
+Servisi node IP’si üzerinden dışa açar.
+
+Her node, belirli bir port üzerinden servise ulaşılabilir hale gelir.
+
+Genellikle test/development ortamları için uygundur.
+
+☁️ LoadBalancer Nedir?
+Genellikle bulut altyapılarında (AWS, GCP, Azure) kullanılır.
+
+Dış dünyaya tek bir IP sunar ve arka planda pod’lara yük dağılımı yapar.
+
+🌀 ClusterIP Nedir?
+Varsayılan servis tipidir.
+
+Servise yalnızca Kubernetes cluster’ı içinden erişim sağlar.
+
+Mikroservislerin birbirleriyle haberleşmesinde kullanılır.
+
+🧠 Özet Tablo
+Kavram	Açıklama
+Node	Kubernetes cluster’ını oluşturan sunucular
+Pod	En küçük çalıştırılabilir birim; container’ları barındırır
+Controller	Pod’ların yaşam döngüsünü yönetir
+Service	Pod’lara sabit erişim sağlar
+ClusterIP	İç erişim sağlar (varsayılan)
+NodePort	Dış dünyaya sabit port üzerinden erişim
+LoadBalancer	Tek IP ile dış erişim, yük dengeleme dahil
+
+
+
+
+🔄 Change Data Capture (CDC) Nedir?
+Change Data Capture (CDC), bir veritabanında gerçekleşen ekleme, güncelleme ve silme işlemlerini gerçek zamanlıya yakın bir şekilde tespit edip başka sistemlere (örneğin Kafka’ya) iletmek için kullanılan bir yaklaşımdır.
+
+🔧 Temel Kavramlar:
+Push (itme) tabanlı yaklaşım: Veritabanını sorgulamak (polling) yerine, CDC doğrudan işlem (transaction) loglarını dinleyerek değişiklikleri hedef sisteme iletir.
+
+İşlem günlükleri (transaction logs):
+
+Tüm veritabanları, yapılan işlemleri güvenli şekilde saklamak için günlük tutar.
+
+Bu günlükler, satır seviyesindeki değişiklikleri içerir (INSERT / UPDATE / DELETE).
+
+PostgreSQL'de bu günlükler Write-Ahead Log (WAL) olarak adlandırılır.
+
+Avantajları:
+
+Düşük kaynak kullanımı: Sürekli sorgulama yapılmaz.
+
+Gerçek zamanlıya yakın güncelleme: Değişiklikler hızlı şekilde iletilir.
+
+Gevşek bağlı mimari: Uygulama koduna müdahale etmeden veri akışı sağlanır.
+
+🛠️ Debezium Nedir?
+Debezium, Change Data Capture uygulamak için geliştirilmiş açık kaynak kodlu ve dağıtık bir platformdur.
+
+⚙️ Özellikleri:
+Veri değişimlerine tepki verir ama veriyi değiştiren uygulamada herhangi bir kod değişikliği yapılmasına gerek kalmaz.
+
+Kafka ile entegre çalışır; Kafka source connector sağlar.
+
+Confluent Schema Registry desteği sunar.
+
+Farklı veritabanları için hazır kaynak (source) konnektörleri mevcuttur.
+
+Örnek:
+PostgreSQL için Debezium source connector kullanılarak, veritabanındaki değişiklikler Kafka’ya otomatik olarak aktarılabilir.
+
+
+
+Kafka KRaft (Kafka Raft Metadata Mode), Apache Kafka'nın ZooKeeper olmadan çalışmasını sağlayan yeni mimarisidir. “KRaft” kelimesi, "Kafka Raft" ifadesinin kısaltmasıdır ve Kafka'nın kendi içinde bir Raft consensus algoritması kullanarak metadata yönetimini gerçekleştirdiğini ifade eder.
+
+🧠 Neden KRaft?
+Kafka uzun yıllar boyunca ZooKeeper kullanarak:
+
+Broker'ları koordine etti,
+
+Konfigürasyonları ve metadata'yı sakladı (konular, bölümler, liderlik bilgisi, ACL'ler...).
+
+Ancak ZooKeeper bazı dezavantajlar getiriyordu:
+
+Yönetimi karmaşık,
+
+Ek bağımlılık,
+
+Yavaş failover ve scaling sorunları.
+
+⚙️ KRaft ile Gelen Yenilikler
+Özellik	Açıklama
+🧩 Tek bileşen	Artık sadece Kafka çalışır, ZooKeeper’a gerek yoktur.
+⚡ Daha hızlı failover	Broker seçimleri ve metadata değişiklikleri daha hızlı yapılır.
+📊 Daha basit operasyon	Kurulum, bakım ve izleme daha kolaydır.
+🔁 Raft konsensüs algoritması	Metadata’nın tutarlılığını ve yüksek erişilebilirliğini sağlar.
+
+🧪 KRaft Durumu
+KRaft Mode, Kafka 3.0 ile preview (deneysel) olarak geldi.
+
+Kafka 3.3+ ile production-ready (üretim için hazır) olarak kabul edilmeye başlandı.
+
+KIP-500: ZooKeeper’ın tamamen kaldırılması sürecini tanımlar.
+
+🏗️ Mimari Özeti
+KRaft Controller Node: Kafka'nın metadata lideridir, tüm metadata işlemlerini yönetir.
+
+Broker Node: Hem veri üretme/tüketme işlemlerini hem de metadata replikasyonunu destekler.
+
+🔧 Nasıl Kullanılır?
+Yeni bir Kafka kümesi kurarken kraft modunda başlatılır:
+
+bash
+Kodu kopyala
+kafka-storage.sh format -t <uuid> -c config/kraft-server.properties
+kafka-server-start.sh config/kraft-server.properties
+
+
+
+
